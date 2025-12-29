@@ -1,8 +1,8 @@
 [package]
-name = "app"
+name = "ipmap"
 version = "0.1.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["2myaus"]
 license = ""
 repository = ""
 edition = "2021"

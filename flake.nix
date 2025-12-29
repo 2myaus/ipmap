@@ -36,6 +36,6 @@
 
       GDK_BACKEND = "x11";
     };
-    packages.${system}.default = nixpkgs.callPackage ./default.nix;
+    packages.${system}.default = pkgs.callPackage ./default.nix {};
   };
 }

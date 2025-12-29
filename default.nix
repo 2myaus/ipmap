@@ -11,8 +11,24 @@
 }:
 rustPlatform.buildRustPackage (finalAttrs: {
   # ...
+  buildType = "release";
 
-  cargoHash = "...";
+  name = with builtins; (fromTOML (readFile ./src-tauri/Cargo.toml)).package.name;
+
+  cargoLock = {
+    lockFile = ./src-tauri/Cargo.lock;
+    allowBuiltinFetchGit = true;
+  };
+
+  src = lib.fileset.toSource {
+    root = ./.;
+    fileset = lib.fileset.unions [
+      ./src
+      ./src-tauri
+    ];
+  };
+
+  # cargoHash = "...";
 
   nativeBuildInputs =
     [
