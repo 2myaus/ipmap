@@ -47,7 +47,7 @@ function catchNewPacket(packet){
  console.log(packet);
 }
 
-listen('new-packet', (event) => {
+listen('new_packet', (event) => {
  /** @type {Packet} */
  const packet = event.payload;
  catchNewPacket(packet);
