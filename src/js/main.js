@@ -1,4 +1,4 @@
-/** @function */
+/** @async @function */
 const invoke = window.__TAURI__.core.invoke;
 
 /** @function */
@@ -60,9 +60,44 @@ listen('new_packet', (event) => {
  * @returns {Promise<{number, number}>}
  */
 async function stringToPosition(inputString) {
- const encoder = new TextEncoder();
- const data = encoder.encode(inputString);
- const hashBuffer = await crypto.subtle.digest('SHA-256', data);
- const dv = new DataView(hashBuffer);
- return { x: dv.getUint16(0) / 65536, y: dv.getUint16(1) / 65536 };
+  const encoder = new TextEncoder();
+  const data = encoder.encode(inputString);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const dv = new DataView(hashBuffer);
+  return { x: dv.getUint16(0) / 65536, y: dv.getUint16(1) / 65536 };
 }
+
+document.addEventListener('DOMContentLoaded', async () => {
+  /** @type {HTMLSelectElement} */
+  const deviceList = document.querySelector('#control #device-select');
+
+  document.querySelector('#control #device-get').addEventListener('click', async () => {
+    /** @type {string} */
+    const devices = await invoke('get_devices');
+
+    deviceList.innerHTML = '';
+
+    devices.split(' ').forEach((deviceName) => {
+      const deviceElement = document.createElement('option');
+      deviceElement.innerText = deviceName;
+      deviceList.appendChild(deviceElement);
+    })
+
+    deviceListChange();
+  });
+
+  async function deviceListChange() {
+    await invoke('set_capture_device', {name: deviceList.value});
+    console.log(deviceList.value)
+  };
+  deviceList.addEventListener('change', deviceListChange);
+
+  let capturing = false;
+  document.querySelector('#control #toggle-capture').addEventListener('click', async () => {
+    invoke('start_capture').catch((error) => {
+      console.log(error);
+    }).finally(() => {
+      capturing = !capturing;
+    });
+  });
+});

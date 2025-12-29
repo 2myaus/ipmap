@@ -24,7 +24,7 @@ pub fn run() {
     })
     .manage(Mutex::new(AppState::default()))
     .invoke_handler(tauri::generate_handler![
-      start_capture, stop_capture, set_capture_device
+      start_capture, stop_capture, set_capture_device, get_devices
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
@@ -90,6 +90,21 @@ fn set_capture_device(name: String, state: tauri::State<'_, Mutex<AppState>>) ->
   data.cap_device_name = name;
 
   Ok(())
+}
+
+/**
+ * return a space-separated list of network interfaces
+*/
+#[tauri::command]
+fn get_devices() -> Result<String, String>{
+  Ok(match pcap::Device::list(){
+      Err(e) => {return Err(format!("unable to get network device list: {}", e.to_string()).to_string());},
+      Ok(val) => val
+    }
+    .into_iter()
+    .map(|dev| dev.name)
+    .collect::<Vec<String>>()
+    .join(" "))
 }
 
 #[tauri::command]

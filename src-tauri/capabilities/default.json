@@ -6,6 +6,10 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "core:window:default",
+    "core:webview:allow-set-webview-auto-resize",
+    "core:webview:allow-set-webview-zoom",
+    "core:window:allow-set-size"
   ]
 }
