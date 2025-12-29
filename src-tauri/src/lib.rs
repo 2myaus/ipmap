@@ -9,8 +9,6 @@ struct AppState{
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  // Pcap setup
-
   tauri::Builder::default()
     .setup(|app| {
       if cfg!(debug_assertions) {

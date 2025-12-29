@@ -38,38 +38,30 @@ const listen = window.__TAURI__.event.listen;
 /** @type {[Packet]} */
 let packetCache = [];
 
+/** @type {Object.<Host, SVGElement>} */
+let hostMap = [];
+
+listen('new_packet', (event) => {
+  /** @type {Packet} */
+  const packet = event.payload;
+  captureNewPacket(packet);
+});
+
 /**
  * handle a new packet
  * @param {Packet} packet
  */
-function catchNewPacket(packet){
- packetCache.push(packet);
- console.log(packet);
-}
+function captureNewPacket(packet) {
+  packetCache.push(packet);
+  // console.log(packet);
 
-listen('new_packet', (event) => {
- /** @type {Packet} */
- const packet = event.payload;
- catchNewPacket(packet);
-});
-
-
-/**
- * hash any given string into a set of x-y coordinates in range [0, 1)
- * @param {string} inputString
- * @returns {Promise<{number, number}>}
- */
-async function stringToPosition(inputString) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(inputString);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const dv = new DataView(hashBuffer);
-  return { x: dv.getUint16(0) / 65536, y: dv.getUint16(1) / 65536 };
+  drawPacket(packet);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   /** @type {HTMLSelectElement} */
   const deviceList = document.querySelector('#control #device-select');
+  const toggleCaptureButton = document.querySelector('#control #toggle-capture')
 
   document.querySelector('#control #device-get').addEventListener('click', async () => {
     /** @type {string} */
@@ -87,17 +79,123 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   async function deviceListChange() {
-    await invoke('set_capture_device', {name: deviceList.value});
-    console.log(deviceList.value)
+    await invoke('set_capture_device', { name: deviceList.value });
   };
   deviceList.addEventListener('change', deviceListChange);
 
   let capturing = false;
-  document.querySelector('#control #toggle-capture').addEventListener('click', async () => {
-    invoke('start_capture').catch((error) => {
-      console.log(error);
-    }).finally(() => {
-      capturing = !capturing;
-    });
+  toggleCaptureButton.addEventListener('click', async () => {
+    if (capturing) {
+      invoke('stop_capture');
+      capturing = false
+    }
+    else {
+      await invoke('start_capture');
+      capturing = true;
+    }
+    toggleCaptureButton.innerText = capturing ? "stop capture" : "start capture";
   });
 });
+
+
+
+
+/**
+ * check whether a given host is in the LAN
+ * @param {Host} host
+ */
+async function isLAN(host) {
+  const hostSplit = host.split('.');
+  return (
+    hostSplit[0] == "10" ||
+    (hostSplit[0] == "192" && hostSplit[1] == "168") ||
+    (
+      hostSplit[0] == "172" &&
+      parseInt(hostSplit[1]) >= 16 &&
+      parseInt(hostSplit[1]) <= 31
+    )
+  );
+}
+
+/**
+ * draw a host on the visual map
+ * @param {Host} host
+ */
+async function drawHost(host) {
+  const position = await hostToPosition(host);
+
+  const hostElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hostMap[host] = hostElement;
+
+  hostElement.classList.add('host');
+  if (await isLAN(host)) {
+    hostElement.classList.add('lan')
+  }
+  hostElement.setAttribute('ip', host);
+  hostElement.setAttribute('cx', position.x * 100);
+  hostElement.setAttribute('cy', position.y * 100);
+
+  document.querySelector('#net-window svg').appendChild(hostElement);
+}
+
+/**
+ * draw a packet event on the visual map
+ * @param {Packet} packet
+ */
+async function drawPacket(packet) {
+  const svgwindow = document.querySelector('#net-window svg');
+  if (!hostMap[packet.src]) {
+    await drawHost(packet.src);
+  }
+  if (!hostMap[packet.dst]) {
+    await drawHost(packet.dst);
+  }
+  srcElem = hostMap[packet.src];
+  dstElem = hostMap[packet.dst];
+
+  const hostElement = document.createElementNS(svgwindow.getAttribute('xmlns'), 'line');
+
+  hostElement.classList.add('packet');
+  hostElement.setAttribute('ts', packet.timestamp);
+  hostElement.setAttribute('x1', srcElem.getAttribute("cx"));
+  hostElement.setAttribute('y1', srcElem.getAttribute("cy"));
+  hostElement.setAttribute('x2', dstElem.getAttribute("cx"));
+  hostElement.setAttribute('y2', dstElem.getAttribute("cy"));
+
+  svgwindow.prepend(hostElement);
+}
+
+/**
+ * turn any given host into a random set of x-y coordinates in range [0, 1)
+ * with special considerations for lan/localhost
+ * @param {Host} host
+ * @returns {Promise<{x: number, y: number}>}
+ */
+async function hostToPosition(host) {
+  let pos = await stringToPosition(host);
+
+  if (await isLAN(host)) {
+    return {
+      x: pos.x * 0.1 + 0.45,
+      y: pos.y * 0.1 + 0.45
+    }
+  }
+  return {
+    x: (pos.x >= 0.4 && pos.x < 0.5) ? 0.4 : (pos.x >= 0.5 && pos.x < 0.6) ? 0.6 : pos.x,
+    y: (pos.y >= 0.4 && pos.y < 0.5) ? 0.4 : (pos.y >= 0.5 && pos.y < 0.6) ? 0.6 : pos.y
+  }
+}
+
+/**
+ * hash any given string into a set of x-y coordinates in range [0, 1)
+ * @param {string} inputString
+ * @returns {Promise<{x: number, y: number}>}
+ */
+async function stringToPosition(inputString) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(inputString);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const dv = new DataView(hashBuffer);
+  return { x: dv.getUint16(0) / 65536, y: dv.getUint16(1) / 65536 };
+}
+
