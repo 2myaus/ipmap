@@ -38,24 +38,24 @@ const listen = window.__TAURI__.event.listen;
 /** @type {[Packet]} */
 let packetCache = [];
 
-/** @type {Object.<Host, SVGElement>} */
+/** @type {Object.<Host, HTMLElement>} */
 let hostMap = [];
 
-listen('new_packet', (event) => {
+listen('new_packet', async (event) => {
   /** @type {Packet} */
   const packet = event.payload;
-  captureNewPacket(packet);
+  await captureNewPacket(packet);
 });
 
 /**
  * handle a new packet
  * @param {Packet} packet
  */
-function captureNewPacket(packet) {
+async function captureNewPacket(packet) {
   packetCache.push(packet);
   // console.log(packet);
 
-  drawPacket(packet);
+  await drawPacket(packet);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -124,18 +124,19 @@ async function isLAN(host) {
 async function drawHost(host) {
   const position = await hostToPosition(host);
 
-  const hostElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  if(hostMap[host]) return;
+  const hostElement = document.createElement('div');
   hostMap[host] = hostElement;
 
   hostElement.classList.add('host');
   if (await isLAN(host)) {
     hostElement.classList.add('lan')
   }
-  hostElement.setAttribute('ip', host);
-  hostElement.setAttribute('cx', position.x * 100);
-  hostElement.setAttribute('cy', position.y * 100);
+  hostElement.setAttribute('title', host);
+  hostElement.style.setProperty('--x-pos', position.x * 100);
+  hostElement.style.setProperty('--y-pos', position.y * 100);
 
-  document.querySelector('#net-window svg').appendChild(hostElement);
+  document.querySelector('#net-window .hosts').appendChild(hostElement);
 }
 
 /**
@@ -153,16 +154,20 @@ async function drawPacket(packet) {
   srcElem = hostMap[packet.src];
   dstElem = hostMap[packet.dst];
 
-  const hostElement = document.createElementNS(svgwindow.getAttribute('xmlns'), 'line');
+  const packetElement = document.createElementNS(svgwindow.getAttribute('xmlns'), 'line');
 
-  hostElement.classList.add('packet');
-  hostElement.setAttribute('ts', packet.timestamp);
-  hostElement.setAttribute('x1', srcElem.getAttribute("cx"));
-  hostElement.setAttribute('y1', srcElem.getAttribute("cy"));
-  hostElement.setAttribute('x2', dstElem.getAttribute("cx"));
-  hostElement.setAttribute('y2', dstElem.getAttribute("cy"));
+  packetElement.classList.add('packet');
+  packetElement.setAttribute('ts', packet.timestamp);
+  packetElement.setAttribute('x1', srcElem.style.getPropertyValue("--x-pos")+"%");
+  packetElement.setAttribute('y1', srcElem.style.getPropertyValue("--y-pos")+"%");
+  packetElement.setAttribute('x2', dstElem.style.getPropertyValue("--x-pos")+"%");
+  packetElement.setAttribute('y2', dstElem.style.getPropertyValue("--y-pos")+"%");
 
-  svgwindow.prepend(hostElement);
+  svgwindow.prepend(packetElement);
+
+  setTimeout(() => {
+    packetElement.remove()
+  }, 10000);
 }
 
 /**
