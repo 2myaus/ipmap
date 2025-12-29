@@ -12,12 +12,16 @@
   left: 0;
 }
 
-#net-window .net-window-svg line.packet {
-  stroke-width: 1px;
-  stroke: red;
+#net-window .net-window-svg line.hop {
+  stroke-width: 4px;
+  stroke: #ff0000a0;
   animation: fade-out ease-out 2s;
   animation-fill-mode: both;
   animation-delay: 0s;
+}
+
+#net-window .net-window-svg line.hop.unknown-intermediates {
+  stroke-dasharray: 40 4 4 4 4 4 40;
 }
 
 @keyframes fade-out {
@@ -44,12 +48,15 @@
   left: calc(var(--x-pos) * 1%);
   top: calc(var(--y-pos) * 1%);
   transform: translate(-50%, -50%);
-  width: 1vw;
-  height: 1vw;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background-color: #f77;
+  --gradient-color: #f77;
+  background-color: var(--gradient-color);
+
+  box-shadow: 0 0 10px -2px var(--gradient-color);
 }
 
 #net-window .hosts .host.lan {
-  background-color: #0ff;
+  --gradient-color: #0ff;
 }

@@ -1,9 +1,9 @@
-import {} from "./globals.js"
+/** @import { Packet, Hop, Host} from "./globals.js"; */
 
 /** @type {Object.<Host, HTMLElement>} */
 let hostMap = [];
 
-const svgwindow = document.querySelector('#net-window .net-window-svg');
+const svgWindow = document.querySelector('#net-window .net-window-svg');
 const hostsWindow = document.querySelector('#net-window .hosts');
 
 /**
@@ -30,7 +30,7 @@ export async function isLAN(host) {
 export async function drawHost(host) {
   const position = await hostToPosition(host);
 
-  if(hostMap[host]) return;
+  if (hostMap[host]) return;
   const hostElement = document.createElement('div');
   hostMap[host] = hostElement;
 
@@ -46,33 +46,66 @@ export async function drawHost(host) {
 }
 
 /**
- * draw a packet event on the visual map
+ * draw a hop event on the visual map
  * @param {Packet} packet
  */
 export async function drawPacket(packet) {
+  /** @type Hop */
+  const hop = {
+    from: packet.src,
+    to: packet.dst,
+    hasUnknownIntermediates: true
+  };
 
-  if (!hostMap[packet.src]) {
-    await drawHost(packet.src);
+  await drawHop(hop);
+}
+
+function randRange(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+/**
+ * draw a hop event on the visual map
+ * @param {Hop} hop
+ */
+async function drawHop(hop) {
+
+  if (!hostMap[hop.from]) {
+    await drawHost(hop.from);
   }
-  if (!hostMap[packet.dst]) {
-    await drawHost(packet.dst);
+  if (!hostMap[hop.to]) {
+    await drawHost(hop.to);
   }
-  const srcElem = hostMap[packet.src];
-  const dstElem = hostMap[packet.dst];
+  /** @type HTMLElement */
+  const srcElem = hostMap[hop.from];
+  /** @type HTMLElement */
+  const dstElem = hostMap[hop.to];
 
-  const packetElement = document.createElementNS(svgwindow.getAttribute('xmlns'), 'line');
+  const ns = svgWindow.getAttribute("xmlns");
+  const hopElement = document.createElementNS(ns, 'line');
 
-  packetElement.classList.add('packet');
-  packetElement.setAttribute('ts', packet.timestamp);
-  packetElement.setAttribute('x1', srcElem.style.getPropertyValue("--x-pos")+"%");
-  packetElement.setAttribute('y1', srcElem.style.getPropertyValue("--y-pos")+"%");
-  packetElement.setAttribute('x2', dstElem.style.getPropertyValue("--x-pos")+"%");
-  packetElement.setAttribute('y2', dstElem.style.getPropertyValue("--y-pos")+"%");
+  hopElement.classList.add('hop');
+  if(hop.hasUnknownIntermediates) hopElement.classList.add('unknown-intermediates');
 
-  svgwindow.prepend(packetElement);
+  // Randomized offsets:
+  const maxRx = srcElem.offsetWidth * 10 / hostsWindow.offsetWidth;
+  const maxRy = srcElem.offsetHeight * 10 / hostsWindow.offsetHeight;
+
+  const theta1 = randRange(0, 2*Math.PI);
+  const x1 = Math.cos(theta1)*randRange(0, maxRx);
+  const y1 = Math.sin(theta1)*randRange(0, maxRy);
+
+
+  hopElement.setAttribute('x1', (parseInt(srcElem.style.getPropertyValue("--x-pos")) + x1) + "%");
+  hopElement.setAttribute('y1', (parseInt(srcElem.style.getPropertyValue("--y-pos")) + y1) + "%");
+  hopElement.setAttribute('x2', dstElem.style.getPropertyValue("--x-pos") + "%");
+  hopElement.setAttribute('y2', dstElem.style.getPropertyValue("--y-pos") + "%");
+  hopElement.setAttribute("pathLength", 100);
+
+  svgWindow.prepend(hopElement);
 
   setTimeout(() => {
-    packetElement.remove()
+    hopElement.remove()
   }, 10000);
 }
 
