@@ -16,6 +16,15 @@ export const listen = window.__TAURI__.event.listen;
  * @property {IP} from
  * @property {IP} to
  * @property {boolean} hasUnknownIntermediates - whether there are unknown hosts/hops between these hosts
+ * @property {boolean} isBroadcast
+ */
+
+/**
+ * an object representing an end-to-end packet transmission between a source and destination host
+ * @typedef {Object} Packet
+ * @property {Host} src
+ * @property {Host} dst
+ * @property {Date} timestamp
  */
 
 /**

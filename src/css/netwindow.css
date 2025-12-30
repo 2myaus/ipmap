@@ -60,3 +60,7 @@
 #net-window .nodes .node.lan {
   --gradient-color: #0ff;
 }
+
+#net-window .nodes .node.localhost {
+  --gradient-color: #0f4;
+}

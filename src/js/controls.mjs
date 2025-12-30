@@ -1,5 +1,5 @@
 import { invoke } from "./globals.mjs"
-import { setShowDomains } from "./netwindow.mjs";
+import { setDevice, setShowDomains } from "./netwindow.mjs";
 
 /** @import { Device } from "./globals.mjs"; */
 
@@ -13,9 +13,12 @@ export async function initControls() {
   /** @type {HTMLButtonElement} */
   const showDomainsButton = document.querySelector("#control #show-domains");
 
+  /** @type {[Device]} */
+  let devices = [];
+
   getDevicesButton.addEventListener('click', async () => {
     /** @type {[Device]} */
-    const devices = await invoke('get_devices');
+    devices = await invoke('get_devices');
 
     deviceList.innerHTML = '';
 
@@ -30,7 +33,12 @@ export async function initControls() {
 
   deviceList.addEventListener('change', deviceListChange);
   async function deviceListChange(){
-    await invoke('set_capture_device', { name: deviceList.value });
+    const deviceName = deviceList.value;
+
+    await invoke('set_capture_device', { name: deviceName});
+    setDevice(devices.find(dev => (
+      dev.name == deviceName
+    )));
   }
 
   showDomainsButton.addEventListener('change', async () => {

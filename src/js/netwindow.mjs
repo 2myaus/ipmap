@@ -1,6 +1,6 @@
 import { invoke } from "./globals.mjs";
 
-/** @import { Packet, Hop, IP } from "./globals.mjs"; */
+/** @import { Packet, Hop, IP, Device } from "./globals.mjs"; */
 
 /** @type {Map<string, HTMLElement>} */
 let nodeMap = new Map();
@@ -12,6 +12,13 @@ let showDomains = false;
 export function setShowDomains(show) {
   showDomains = show == true; // ensure a bool
   reDrawNodes();
+}
+
+/** @type {Device?} */
+let device;
+/** @param {Device?} dev */
+export function setDevice(dev){
+  device = dev;
 }
 
 /**
@@ -51,12 +58,18 @@ export async function drawNode(ip) {
   const position = await ipToPosition(ip);
 
   if (nodeMap.has(ip)) return;
+  
   const ipElement = document.createElement('div');
   ipElement.style.setProperty('--x-pos', position.x * 100);
   ipElement.style.setProperty('--y-pos', position.y * 100);
 
   ipElement.classList.add('node');
-  if (await isLAN(ip)) {
+  if(device && device.addresses.find(addr => (
+    addr.addr == ip
+  ))) {
+    ipElement.classList.add('localhost');
+  }
+  else if (await isLAN(ip)) {
     ipElement.classList.add('lan')
   }
   ipElement.setAttribute('title', ip);
@@ -96,7 +109,22 @@ function randRange(min, max) {
  * @param {Hop} hop
  */
 async function drawHop(hop) {
+  if(device){
+    let anyBroadcast = false;
 
+    device.addresses.forEach(a=> {
+      if(hop.to != a.broadcast_addr) return;
+      anyBroadcast = true;
+
+      drawHop({
+        from: hop.from,
+        to: a.addr,
+        hasUnknownIntermediates: hop.hasUnknownIntermediates
+      });
+    })
+
+    if(anyBroadcast) return;
+  }
   if (!nodeMap.has(hop.from)) {
     await drawNode(hop.from);
   }
@@ -128,10 +156,6 @@ async function drawHop(hop) {
   hopElement.setAttribute('x2', `${dstElem.style.getPropertyValue("--x-pos")}%`);
   hopElement.setAttribute('y2', `${dstElem.style.getPropertyValue("--y-pos")}%`);
   hopElement.setAttribute("pathLength", 100);
-
-  if(dstElem.style.getPropertyValue("--x-pos") == ''){
-    debugger;
-  }
 
   svgWindow.prepend(hopElement);
 
