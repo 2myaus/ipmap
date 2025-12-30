@@ -24,7 +24,8 @@ pub fn run() {
     })
     .manage(Mutex::new(AppState::default()))
     .invoke_handler(tauri::generate_handler![
-      start_capture, stop_capture, set_capture_device, get_devices
+      start_capture, stop_capture, set_capture_device, get_devices,
+      domain_to_ips, ip_to_domain
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
@@ -73,7 +74,6 @@ fn parse_packet(packet: pcap::Packet) -> Result<PacketInfo, String> {
 
 #[tauri::command]
 fn set_capture_device(name: String, state: tauri::State<'_, Mutex<AppState>>) -> Result<(), String>{
-
   let mut devices = match pcap::Device::list(){
       Err(e) => {return Err(format!("unable to get network device list: {}", e.to_string()).to_string());},
       Ok(val) => val
@@ -93,8 +93,8 @@ fn set_capture_device(name: String, state: tauri::State<'_, Mutex<AppState>>) ->
   Ok(())
 }
 
-/**
- * return a space-separated list of network interfaces
+/*
+ * return a list of network interfaces
 */
 #[tauri::command]
 fn get_devices() -> Result<Vec<serializers::DeviceInfo>, String>{
@@ -160,4 +160,20 @@ fn stop_capture(state: tauri::State<'_, Mutex<AppState>>) {
 
   data.cap_break_handle.as_ref().unwrap().breakloop();
   data.cap_break_handle = None;
+}
+
+#[tauri::command]
+fn domain_to_ips(domain: String) -> Result<Vec<std::net::IpAddr>, String>{
+  match dns_lookup::lookup_host(&domain) {
+    Err(e) => Err(format!("couldn't get IPs from domain: {}", e).to_string()),
+    Ok(val) => Ok(val.collect())
+  }
+}
+
+#[tauri::command]
+fn ip_to_domain(ip: std::net::IpAddr) -> Result<String, String>{
+  match dns_lookup::lookup_addr(&ip) {
+    Err(e) => Err(format!("couldn't get domain from IP: {}", e).to_string()),
+    Ok(val) => Ok(val)
+  }
 }

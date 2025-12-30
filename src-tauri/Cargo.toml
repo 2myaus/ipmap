@@ -26,3 +26,4 @@ tauri-plugin-log = "2"
 pcap = { version = "2", features = ["capture-stream"] }
 etherparse = "0.18"
 libc = "0.2.178"
+dns-lookup = "3.0.1"
