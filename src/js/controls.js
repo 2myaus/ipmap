@@ -1,4 +1,5 @@
 import { invoke } from "./globals.js"
+/** @import { Device } from "./globals.js"; */
 
 export async function initControls() {
   /** @type {HTMLSelectElement} */
@@ -6,14 +7,14 @@ export async function initControls() {
   const toggleCaptureButton = document.querySelector('#control #toggle-capture')
 
   document.querySelector('#control #device-get').addEventListener('click', async () => {
-    /** @type {string} */
+    /** @type {[Device]} */
     const devices = await invoke('get_devices');
 
     deviceList.innerHTML = '';
 
-    devices.split(' ').forEach((deviceName) => {
+    devices.forEach((device) => {
       const deviceElement = document.createElement('option');
-      deviceElement.innerText = deviceName;
+      deviceElement.innerText = device.name;
       deviceList.appendChild(deviceElement);
     })
 

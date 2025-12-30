@@ -1,3 +1,5 @@
+mod serializers;
+
 use tauri::Emitter;
 use std::sync::Mutex;
 
@@ -35,13 +37,14 @@ struct PacketInfo {
   timestamp: i64
 }
 
+
 // turn a pcap packet into an instance of PacketInfo
 fn parse_packet(packet: pcap::Packet) -> Result<PacketInfo, String> {
   let net = match etherparse::PacketHeaders::from_ethernet_slice(packet.data) {
     Err(e) => {return Err(format!("couldn't parse packet: {}", e.to_string())); },
     Ok(value) => match value.net {
-      None => {return Err("no net header".to_string()); },
-      Some(val) => val
+      Some(val) => val,
+      _ => {return Err("no net header".to_string()); }
     }
   };
 
@@ -94,15 +97,15 @@ fn set_capture_device(name: String, state: tauri::State<'_, Mutex<AppState>>) ->
  * return a space-separated list of network interfaces
 */
 #[tauri::command]
-fn get_devices() -> Result<String, String>{
+fn get_devices() -> Result<Vec<serializers::DeviceInfo>, String>{
   Ok(match pcap::Device::list(){
       Err(e) => {return Err(format!("unable to get network device list: {}", e.to_string()).to_string());},
       Ok(val) => val
     }
     .into_iter()
-    .map(|dev| dev.name)
-    .collect::<Vec<String>>()
-    .join(" "))
+    .map(|device| serializers::DeviceInfo(device))
+    .collect()
+    )
 }
 
 #[tauri::command]
@@ -119,8 +122,8 @@ fn start_capture(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppState>>
     .into_iter();
 
   let device = match devices.find(|dev| dev.name == data.cap_device_name) {
-    None => {return Err("capture device cannot be found".to_string());},
-    Some(val) => val
+    Some(val) => val,
+    _ => {return Err("capture device cannot be found".to_string());}
   };
 
   let mut cap = match 
