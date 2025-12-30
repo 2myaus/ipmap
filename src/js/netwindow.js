@@ -1,48 +1,52 @@
-/** @import { Packet, Hop, Host} from "./globals.js"; */
+/** @import { Packet, Hop, IP } from "./globals.js"; */
 
-/** @type {Object.<Host, HTMLElement>} */
-let hostMap = [];
+/** @type {Object.<IP, HTMLElement>} */
+let ipMap = [];
 
 const svgWindow = document.querySelector('#net-window .net-window-svg');
-const hostsWindow = document.querySelector('#net-window .hosts');
+const nodesWindow = document.querySelector('#net-window .nodes');
 
 /**
- * check whether a given host is in the LAN
- * @param {Host} host
+ * check whether a given IP is in the LAN
+ * @param {IP} ip
  */
-export async function isLAN(host) {
-  const hostSplit = host.split('.');
+export async function isLAN(ip) {
+
+  // TODO: IPV6
+  if(ip.includes(':')) return false;
+  
+  const ipSplit = ip.split('.');
   return (
-    hostSplit[0] == "10" ||
-    (hostSplit[0] == "192" && hostSplit[1] == "168") ||
+    ipSplit[0] == "10" ||
+    (ipSplit[0] == "192" && ipSplit[1] == "168") ||
     (
-      hostSplit[0] == "172" &&
-      parseInt(hostSplit[1]) >= 16 &&
-      parseInt(hostSplit[1]) <= 31
+      ipSplit[0] == "172" &&
+      parseInt(ipSplit[1]) >= 16 &&
+      parseInt(ipSplit[1]) <= 31
     )
   );
 }
 
 /**
- * draw a host on the visual map
- * @param {Host} host
+ * draw an ip on the visual map
+ * @param {IP} ip
  */
-export async function drawHost(host) {
-  const position = await hostToPosition(host);
+export async function drawNode(ip) {
+  const position = await ipToPosition(ip);
 
-  if (hostMap[host]) return;
-  const hostElement = document.createElement('div');
-  hostMap[host] = hostElement;
+  if (ipMap[ip]) return;
+  const ipElement = document.createElement('div');
+  ipMap[ip] = ipElement;
 
-  hostElement.classList.add('host');
-  if (await isLAN(host)) {
-    hostElement.classList.add('lan')
+  ipElement.classList.add('node');
+  if (await isLAN(ip)) {
+    ipElement.classList.add('lan')
   }
-  hostElement.setAttribute('title', host);
-  hostElement.style.setProperty('--x-pos', position.x * 100);
-  hostElement.style.setProperty('--y-pos', position.y * 100);
+  ipElement.setAttribute('title', ip);
+  ipElement.style.setProperty('--x-pos', position.x * 100);
+  ipElement.style.setProperty('--y-pos', position.y * 100);
 
-  hostsWindow.appendChild(hostElement);
+  nodesWindow.appendChild(ipElement);
 }
 
 /**
@@ -70,16 +74,16 @@ function randRange(min, max) {
  */
 async function drawHop(hop) {
 
-  if (!hostMap[hop.from]) {
-    await drawHost(hop.from);
+  if (!ipMap[hop.from]) {
+    await drawNode(hop.from);
   }
-  if (!hostMap[hop.to]) {
-    await drawHost(hop.to);
+  if (!ipMap[hop.to]) {
+    await drawNode(hop.to);
   }
   /** @type HTMLElement */
-  const srcElem = hostMap[hop.from];
+  const srcElem = ipMap[hop.from];
   /** @type HTMLElement */
-  const dstElem = hostMap[hop.to];
+  const dstElem = ipMap[hop.to];
 
   const ns = svgWindow.getAttribute("xmlns");
   const hopElement = document.createElementNS(ns, 'line');
@@ -88,8 +92,8 @@ async function drawHop(hop) {
   if(hop.hasUnknownIntermediates) hopElement.classList.add('unknown-intermediates');
 
   // Randomized offsets:
-  const maxRx = srcElem.offsetWidth * 10 / hostsWindow.offsetWidth;
-  const maxRy = srcElem.offsetHeight * 10 / hostsWindow.offsetHeight;
+  const maxRx = srcElem.offsetWidth * 10 / nodesWindow.offsetWidth;
+  const maxRy = srcElem.offsetHeight * 10 / nodesWindow.offsetHeight;
 
   const theta1 = randRange(0, 2*Math.PI);
   const x1 = Math.cos(theta1)*randRange(0, maxRx);
@@ -110,15 +114,15 @@ async function drawHop(hop) {
 }
 
 /**
- * turn any given host into a random set of x-y coordinates in range [0, 1)
- * with special considerations for lan/localhost
- * @param {Host} host
+ * turn any given ip into a random set of x-y coordinates in range [0, 1)
+ * with special considerations for lan/localip
+ * @param {IP} ip
  * @returns {Promise<{x: number, y: number}>}
  */
-async function hostToPosition(host) {
-  let pos = await stringToPosition(host);
+async function ipToPosition(ip) {
+  let pos = await stringToPosition(ip);
 
-  if (await isLAN(host)) {
+  if (await isLAN(ip)) {
     return {
       x: pos.x * 0.1 + 0.45,
       y: pos.y * 0.1 + 0.45

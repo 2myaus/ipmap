@@ -34,7 +34,7 @@
   }
 }
 
-#net-window .hosts {
+#net-window .nodes {
   position: absolute;
   left: 0;
   top: 0;
@@ -43,7 +43,7 @@
   z-index: 10;
 }
 
-#net-window .hosts .host {
+#net-window .nodes .node {
   position: absolute;
   left: calc(var(--x-pos) * 1%);
   top: calc(var(--y-pos) * 1%);
@@ -57,6 +57,6 @@
   box-shadow: 0 0 10px -2px var(--gradient-color);
 }
 
-#net-window .hosts .host.lan {
+#net-window .nodes .node.lan {
   --gradient-color: #0ff;
 }

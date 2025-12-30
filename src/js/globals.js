@@ -5,13 +5,6 @@ export const invoke = window.__TAURI__.core.invoke;
 export const listen = window.__TAURI__.event.listen;
 
 /**
- * an object representing a network host
- * @typedef {Object} Host
- * @property {IP} ip
- * @property {string?} domain - the domain of the host, or null
- */
-
-/**
  * an object representing an IP address
  * @typedef {string} IP - the IPV4 or IPV6 address as a string
  */
@@ -19,8 +12,8 @@ export const listen = window.__TAURI__.event.listen;
 /**
  * an object representing a transmission hop between two hosts
  * @typedef {Object} Hop
- * @property {Host} from
- * @property {Host} to
+ * @property {IP} from
+ * @property {IP} to
  * @property {boolean} hasUnknownIntermediates - whether there are unknown hosts/hops between these hosts
  */
 

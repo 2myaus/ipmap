@@ -1,7 +1,7 @@
-/** @import { Packet, Hop, Host} from "./globals.js"; */
+/** @import { Packet, Hop } from "./globals.js"; */
 import { invoke, listen } from "./globals.js";
 import { initControls } from "./controls.js";
-import { drawHost, drawPacket, isLAN } from "./netwindow.js";
+import { drawPacket, isLAN } from "./netwindow.js";
 
 /** @type {[Packet]} */
 let packetCache = [];
