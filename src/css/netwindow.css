@@ -1,7 +1,7 @@
 #net-window {
-  width: 80vw;
-  height: 80vh;
   position: sticky;
+  border: 2px solid black;
+  border-radius: 20px;
 }
 
 #net-window .net-window-svg {

@@ -1,12 +1,19 @@
-import { invoke } from "./globals.js"
-/** @import { Device } from "./globals.js"; */
+import { invoke } from "./globals.mjs"
+import { setShowDomains } from "./netwindow.mjs";
+
+/** @import { Device } from "./globals.mjs"; */
 
 export async function initControls() {
   /** @type {HTMLSelectElement} */
   const deviceList = document.querySelector('#control #device-select');
-  const toggleCaptureButton = document.querySelector('#control #toggle-capture')
+  /** @type {HTMLInputElement} */
+  const toggleCaptureButton = document.querySelector('#control #toggle-capture');
+  /** @type {HTMLButtonElement} */
+  const getDevicesButton = document.querySelector('#control #device-get');
+  /** @type {HTMLButtonElement} */
+  const showDomainsButton = document.querySelector("#control #show-domains");
 
-  document.querySelector('#control #device-get').addEventListener('click', async () => {
+  getDevicesButton.addEventListener('click', async () => {
     /** @type {[Device]} */
     const devices = await invoke('get_devices');
 
@@ -21,10 +28,14 @@ export async function initControls() {
     deviceListChange();
   });
 
-  async function deviceListChange() {
-    await invoke('set_capture_device', { name: deviceList.value });
-  };
   deviceList.addEventListener('change', deviceListChange);
+  async function deviceListChange(){
+    await invoke('set_capture_device', { name: deviceList.value });
+  }
+
+  showDomainsButton.addEventListener('change', async () => {
+    setShowDomains(showDomainsButton.checked);
+  });
 
   let capturing = false;
   toggleCaptureButton.addEventListener('click', async () => {

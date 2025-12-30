@@ -1,10 +1,18 @@
-/** @import { Packet, Hop, IP } from "./globals.js"; */
+import { invoke } from "./globals.mjs";
 
-/** @type {Object.<IP, HTMLElement>} */
-let ipMap = [];
+/** @import { Packet, Hop, IP } from "./globals.mjs"; */
+
+/** @type {Map<string, HTMLElement>} */
+let nodeMap = new Map();
 
 const svgWindow = document.querySelector('#net-window .net-window-svg');
 const nodesWindow = document.querySelector('#net-window .nodes');
+
+let showDomains = false;
+export function setShowDomains(show) {
+  showDomains = show == true; // ensure a bool
+  reDrawNodes();
+}
 
 /**
  * check whether a given IP is in the LAN
@@ -13,8 +21,8 @@ const nodesWindow = document.querySelector('#net-window .nodes');
 export async function isLAN(ip) {
 
   // TODO: IPV6
-  if(ip.includes(':')) return false;
-  
+  if (ip.includes(':')) return false;
+
   const ipSplit = ip.split('.');
   return (
     ipSplit[0] == "10" ||
@@ -27,6 +35,14 @@ export async function isLAN(ip) {
   );
 }
 
+async function reDrawNodes() {
+  Array.from(nodeMap.entries()).forEach(([ip, oldElem]) => {
+    nodeMap.delete(ip);
+    drawNode(ip);
+    oldElem.remove();
+  });
+}
+
 /**
  * draw an ip on the visual map
  * @param {IP} ip
@@ -34,17 +50,24 @@ export async function isLAN(ip) {
 export async function drawNode(ip) {
   const position = await ipToPosition(ip);
 
-  if (ipMap[ip]) return;
+  if (nodeMap.has(ip)) return;
   const ipElement = document.createElement('div');
-  ipMap[ip] = ipElement;
+  ipElement.style.setProperty('--x-pos', position.x * 100);
+  ipElement.style.setProperty('--y-pos', position.y * 100);
 
   ipElement.classList.add('node');
   if (await isLAN(ip)) {
     ipElement.classList.add('lan')
   }
   ipElement.setAttribute('title', ip);
-  ipElement.style.setProperty('--x-pos', position.x * 100);
-  ipElement.style.setProperty('--y-pos', position.y * 100);
+  nodeMap.set(ip, ipElement);
+
+  if (showDomains) {
+    try {
+      const domain = await invoke('ip_to_domain', { ip: ip });
+      ipElement.setAttribute('title', `${domain} (${ip})`);
+    } catch (e) { console.warn(e); }
+  }
 
   nodesWindow.appendChild(ipElement);
 }
@@ -74,37 +97,41 @@ function randRange(min, max) {
  */
 async function drawHop(hop) {
 
-  if (!ipMap[hop.from]) {
+  if (!nodeMap.has(hop.from)) {
     await drawNode(hop.from);
   }
-  if (!ipMap[hop.to]) {
+  if (!nodeMap.has(hop.to)) {
     await drawNode(hop.to);
   }
   /** @type HTMLElement */
-  const srcElem = ipMap[hop.from];
+  const srcElem = nodeMap.get(hop.from);
   /** @type HTMLElement */
-  const dstElem = ipMap[hop.to];
+  const dstElem = nodeMap.get(hop.to);
 
   const ns = svgWindow.getAttribute("xmlns");
   const hopElement = document.createElementNS(ns, 'line');
 
   hopElement.classList.add('hop');
-  if(hop.hasUnknownIntermediates) hopElement.classList.add('unknown-intermediates');
+  if (hop.hasUnknownIntermediates) hopElement.classList.add('unknown-intermediates');
 
   // Randomized offsets:
   const maxRx = srcElem.offsetWidth * 10 / nodesWindow.offsetWidth;
   const maxRy = srcElem.offsetHeight * 10 / nodesWindow.offsetHeight;
 
-  const theta1 = randRange(0, 2*Math.PI);
-  const x1 = Math.cos(theta1)*randRange(0, maxRx);
-  const y1 = Math.sin(theta1)*randRange(0, maxRy);
+  const theta1 = randRange(0, 2 * Math.PI);
+  const x1 = Math.cos(theta1) * randRange(0, maxRx);
+  const y1 = Math.sin(theta1) * randRange(0, maxRy);
 
 
-  hopElement.setAttribute('x1', (parseInt(srcElem.style.getPropertyValue("--x-pos")) + x1) + "%");
-  hopElement.setAttribute('y1', (parseInt(srcElem.style.getPropertyValue("--y-pos")) + y1) + "%");
-  hopElement.setAttribute('x2', dstElem.style.getPropertyValue("--x-pos") + "%");
-  hopElement.setAttribute('y2', dstElem.style.getPropertyValue("--y-pos") + "%");
+  hopElement.setAttribute('x1', `${parseInt(srcElem.style.getPropertyValue("--x-pos")) + x1}%`);
+  hopElement.setAttribute('y1', `${parseInt(srcElem.style.getPropertyValue("--y-pos")) + y1}%`);
+  hopElement.setAttribute('x2', `${dstElem.style.getPropertyValue("--x-pos")}%`);
+  hopElement.setAttribute('y2', `${dstElem.style.getPropertyValue("--y-pos")}%`);
   hopElement.setAttribute("pathLength", 100);
+
+  if(dstElem.style.getPropertyValue("--x-pos") == ''){
+    debugger;
+  }
 
   svgWindow.prepend(hopElement);
 
