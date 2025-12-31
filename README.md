@@ -10,7 +10,7 @@ current goals are:
 ## building:
 this software should work on all platform. as of writing, it has only been tested on linux.  
 building/running will require [normal dependencies for a Tauri project](https://v2.tauri.app/start/prerequisites/). basically, Rust and Tauri itself.  
-it requires uses bun for the frontend.  
+it uses bun for the frontend.  
 additionally, it uses rust-pcap and requires [its dependencies](https://github.com/rust-pcap/pcap/#Building) (libpcap on linux or mac, npcap on windows).
 
 to build/run, you can run ``cargo tauri build`` for a release build, or ``cargo tauri dev`` for developing.
