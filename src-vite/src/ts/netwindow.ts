@@ -1,10 +1,12 @@
-import type { Device, Hop, IP, Packet } from "./globals";
+import type { Hop, IP, Packet } from "./globals";
 import { deviceHasAddress } from "./globals";
+import { getSelectedDevice } from "./controls";
+import { getNodeInfo } from "./nodeinfo";
 
-import { ip_to_domain,  } from "./commands";
+
 import * as ipaddr from "ipaddr.js";
 
-let nodeMap: Map<string, HTMLElement> = new Map();
+let nodeMap: Map<IP, HTMLElement> = new Map();
 
 const svgWindow: HTMLElement = document.querySelector('#net-window .net-window-svg')!;
 const nodesWindow: HTMLElement = document.querySelector('#net-window .nodes')!;
@@ -15,12 +17,6 @@ export function setShowDomains(show: boolean) {
   reDrawNodes();
 }
 
-let device: Device | null = null;
-
-export function setDevice(dev?: Device) {
-  device = dev || null;
-}
-
 async function reDrawNodes() {
   Array.from(nodeMap.entries()).forEach(([ip, oldElem]) => {
     nodeMap.delete(ip);
@@ -29,11 +25,22 @@ async function reDrawNodes() {
   });
 }
 
+export async function selectNode(ip: IP){
+  const nodeElement = nodeMap.get(ip);
+  if (!nodeElement) return;
+  nodesWindow.querySelectorAll('.selected').forEach(e => {
+    e.classList.remove('selected');
+  });
+  nodeElement.classList.add('selected');
+}
+
 //* draw an ip on the visual map
 export async function drawNode(ip: IP) {
   const position = await ipToPosition(ip);
 
   if (nodeMap.has(ip)) return;
+
+  const nodeInfo = getNodeInfo(ip);
 
   const ipElement = document.createElement('div');
   ipElement.style.setProperty('--x-pos', `${position.x * 100}`);
@@ -42,19 +49,33 @@ export async function drawNode(ip: IP) {
   ipElement.classList.add('node');
 
   const ipRange = ipaddr.parse(ip).range()
+  const device = getSelectedDevice();
+
+  if (ip.includes(':')) {
+    ipElement.classList.add('ipv6');
+  }
+
   if (device && deviceHasAddress(device, ip)) {
     ipElement.classList.add('localhost');
   }
   else if (ipRange == "private") {
     ipElement.classList.add('lan')
   }
+
+  const ipColor = ipToColor(ip);
+  ipElement.style.setProperty('--ip-color', `rgb(${ipColor.r}, ${ipColor.g}, ${ipColor.b})`);
+
   ipElement.setAttribute('title', ip);
   nodeMap.set(ip, ipElement);
 
   if (showDomains) {
-    const domain = await ip_to_domain(ip);
+    const domain = await nodeInfo.getDomain();
     if(domain) ipElement.setAttribute('title', `${domain} (${ip})`);
   }
+
+  ipElement.addEventListener('click', () => {
+    selectNode(ip);
+  });
 
   nodesWindow.appendChild(ipElement);
 }
@@ -78,6 +99,7 @@ function randRange(min: number, max: number) {
 
 //* draw a hop event on the visual map
 async function drawHop(hop: Hop) {
+  const device = getSelectedDevice();
   if (device) {
     let anyBroadcast = false;
 
@@ -138,6 +160,7 @@ async function drawHop(hop: Hop) {
 
 //* turn any given ip into a random set of x-y coordinates in range [0, 1) with special considerations for lan
 async function ipToPosition(ip: IP): Promise<{ x: number, y: number }> {
+  const device = getSelectedDevice();
   let pos = await stringToPosition(ip);
 
   if (ipaddr.parse(ip).range() == "private" || (device && deviceHasAddress(device, ip))) {
@@ -161,3 +184,41 @@ async function stringToPosition(input:string): Promise<{ x: number, y: number }>
   return { x: dv.getUint16(0) / 65536, y: dv.getUint16(1) / 65536 };
 }
 
+function ipToColor(ip:IP){
+  const octets = ipaddr.parse(ip).toByteArray();
+  if(octets.length == 16){
+    const oc1 = octets.slice(0, 5).reduce((p, c) => {return p+c;}) / (256*5);
+    const oc2 = octets.slice(5, 10).reduce((p, c) => {return p+c;}) / (256*5);
+    const oc3 = octets.slice(10, 16).reduce((p, c) => {return p+c;}) / (256*6);
+
+    return HSVtoRGB(oc1, oc2, oc3);
+  }
+  return HSVtoRGB(
+    (octets[0] + octets[1]) / 512,
+    octets[3] / 512 + 0.5,
+    octets[2] / 512 + 0.5
+  );
+}
+
+//* Convert HSV [0, 1] color to RGB [0, 255]
+function HSVtoRGB(h:number, s:number, v:number) {
+    var r, g, b, i, f, p, q, t;
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return {
+        r: Math.round(r! * 255),
+        g: Math.round(g! * 255),
+        b: Math.round(b! * 255)
+    };
+}

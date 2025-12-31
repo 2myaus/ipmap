@@ -1,6 +1,13 @@
 import { get_devices, set_capture_device, start_capture, stop_capture } from './commands';
 import type { Device } from './globals';
-import { setDevice, setShowDomains } from "./netwindow";
+import {  setShowDomains } from "./netwindow";
+
+let devices:Device[] = [];
+let selectedDevice:Device | undefined;
+
+export function getSelectedDevice(){
+  return selectedDevice;
+}
 
 export async function initControls() {
   const deviceList = document.querySelector('#control #device-select') as HTMLSelectElement;
@@ -8,7 +15,6 @@ export async function initControls() {
   const getDevicesButton = document.querySelector('#control #device-get') as HTMLButtonElement;
   const showDomainsCheckbox = document.querySelector("#control #show-domains") as HTMLInputElement;
 
-  let devices:Device[] = [];
 
   getDevicesButton.addEventListener('click', async () => {
     devices = await get_devices();
@@ -25,13 +31,14 @@ export async function initControls() {
   });
 
   deviceList.addEventListener('change', deviceListChange);
+
   async function deviceListChange(){
     const deviceName = deviceList.value;
 
     await set_capture_device(deviceName);
-    setDevice(devices.find(dev => (
+    selectedDevice = devices.find(dev => (
       dev.name == deviceName
-    )));
+    ));
   }
 
   showDomainsCheckbox.addEventListener('change', async () => {

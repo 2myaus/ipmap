@@ -11,12 +11,12 @@ export async function set_capture_device(deviceName: string) {
   await invoke('set_capture_device', { name: deviceName });
 }
 export async function get_devices(): Promise<Device[]> {
-  return invoke('get_devices');
+  return await invoke('get_devices');
 }
-export async function domain_to_ips(domain: string) {
-  await invoke('domain_to_ips', { domain: domain });
+export async function domain_to_ips(domain: string) : Promise<IP[]> {
+  return await invoke('domain_to_ips', { domain: domain });
 }
-export async function ip_to_domain(ip: IP) {
+export async function ip_to_domain(ip: IP) : Promise<string | undefined> {
   try {
     return await invoke('ip_to_domain', { ip: ip });
   }

@@ -56,19 +56,51 @@
   left: calc(var(--x-pos) * 1%);
   top: calc(var(--y-pos) * 1%);
   transform: translate(-50%, -50%);
+
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  --gradient-color: #f77;
-  background-color: var(--gradient-color);
+  --ip-color: #f77;
+  --outline-color: #f77;
+  background-color: var(--ip-color);
 
-  box-shadow: 0 0 10px -2px var(--gradient-color);
+  box-shadow: 0 0 10px -2px var(--ip-color);
+}
+
+#net-window .nodes .node.ipv6 {
+  --outline-color: #70f;
 }
 
 #net-window .nodes .node.lan {
-  --gradient-color: #0ff;
+  --outline-color: #0ff;
 }
 
 #net-window .nodes .node.localhost {
-  --gradient-color: #0f4;
+  --outline-color: #0f4;
+}
+
+#net-window .nodes .node:where(.lan, .localhost)::after {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120%;
+  height: 120%;
+
+  transform-origin: center center;
+  transform: translate(-50%, -50%);
+
+  border-radius: 50%;
+  border: 4px solid var(--outline-color);
+  pointer-events: none;
+  content: "";
+  transition: transform 0.1s ease-out, filter 0.1s ease-out;
+}
+
+#net-window .nodes .node:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+#net-window .nodes .node.selected {
+  transform: translate(-50%, -50%) scale(1.1);
+  filter: brightness(0.8);
 }
