@@ -35,7 +35,7 @@ pub fn run() {
 struct PacketInfo {
   src: String,
   dst: String,
-  timestamp: i64
+  timestamp: u64
 }
 
 
@@ -61,12 +61,12 @@ fn parse_packet(packet: pcap::Packet) -> Result<PacketInfo, String> {
         .map(|num| num.to_string())
         .collect::<Vec<String>>()
         .join("."),
-      timestamp: packet.header.ts.tv_sec * 1000 + packet.header.ts.tv_usec / 1000,
+      timestamp: (packet.header.ts.tv_sec * 1000 + packet.header.ts.tv_usec / 1000) as u64,
     }),
     etherparse::NetHeaders::Ipv6(v6head, _) => Ok(PacketInfo{
       src: v6head.source_addr().to_string(),
       dst: v6head.destination_addr().to_string(),
-      timestamp: packet.header.ts.tv_sec * 1000 + packet.header.ts.tv_usec / 1000,
+      timestamp: (packet.header.ts.tv_sec * 1000 + packet.header.ts.tv_usec / 1000) as u64,
     }),
     _ => Err("not an ip packet".to_string())
   }
