@@ -6,7 +6,6 @@ this project uses Tauri for a Rust backend and HTML/CSS/JS frontend.
 current goals are:
 - responsive graph i.e clicking on nodes shows their details
 - an option to draw onto a world map with ip geolocation (probably using leaflet)
-- a frontend framework for managing dependencies
 
 ## building:
 this software should work on all platform. as of writing, it has only been tested on linux.  

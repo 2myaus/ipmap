@@ -1,31 +1,25 @@
-import { invoke } from "./globals.mjs";
+import type { Device, Hop, IP, Packet } from "./globals";
+import { invoke } from "@tauri-apps/api/core";
 
-/** @import { Packet, Hop, IP, Device } from "./globals.mjs"; */
+let nodeMap: Map<string, HTMLElement> = new Map();
 
-/** @type {Map<string, HTMLElement>} */
-let nodeMap = new Map();
-
-const svgWindow = document.querySelector('#net-window .net-window-svg');
-const nodesWindow = document.querySelector('#net-window .nodes');
+const svgWindow: HTMLElement = document.querySelector('#net-window .net-window-svg')!;
+const nodesWindow: HTMLElement = document.querySelector('#net-window .nodes')!;
 
 let showDomains = false;
-export function setShowDomains(show) {
-  showDomains = show == true; // ensure a bool
+export function setShowDomains(show: boolean) {
+  showDomains = show;
   reDrawNodes();
 }
 
-/** @type {Device?} */
-let device;
-/** @param {Device?} dev */
-export function setDevice(dev){
-  device = dev;
+let device: Device | null = null;
+
+export function setDevice(dev?: Device) {
+  device = dev || null;
 }
 
-/**
- * check whether a given IP is in the LAN
- * @param {IP} ip
- */
-export async function isLAN(ip) {
+//* check whether a given IP is in the LAN
+export async function isLAN(ip: IP) {
 
   // TODO: IPV6
   if (ip.includes(':')) return false;
@@ -50,21 +44,18 @@ async function reDrawNodes() {
   });
 }
 
-/**
- * draw an ip on the visual map
- * @param {IP} ip
- */
-export async function drawNode(ip) {
+//* draw an ip on the visual map
+export async function drawNode(ip: IP) {
   const position = await ipToPosition(ip);
 
   if (nodeMap.has(ip)) return;
-  
+
   const ipElement = document.createElement('div');
-  ipElement.style.setProperty('--x-pos', position.x * 100);
-  ipElement.style.setProperty('--y-pos', position.y * 100);
+  ipElement.style.setProperty('--x-pos', `${position.x * 100}`);
+  ipElement.style.setProperty('--y-pos', `${position.y * 100}`);
 
   ipElement.classList.add('node');
-  if(device && device.addresses.find(addr => (
+  if (device && device.addresses.find(addr => (
     addr.addr == ip
   ))) {
     ipElement.classList.add('localhost');
@@ -85,45 +76,40 @@ export async function drawNode(ip) {
   nodesWindow.appendChild(ipElement);
 }
 
-/**
- * draw a hop event on the visual map
- * @param {Packet} packet
- */
-export async function drawPacket(packet) {
-  /** @type Hop */
-  const hop = {
+//* draw a hop event on the visual map
+export async function drawPacket(packet: Packet) {
+  const hop: Hop = {
     from: packet.src,
     to: packet.dst,
-    hasUnknownIntermediates: true
+    hasUnknownIntermediates: true,
+    isBroadcast: false
   };
 
   await drawHop(hop);
 }
 
-function randRange(min, max) {
+function randRange(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-/**
- * draw a hop event on the visual map
- * @param {Hop} hop
- */
-async function drawHop(hop) {
-  if(device){
+//* draw a hop event on the visual map
+async function drawHop(hop: Hop) {
+  if (device) {
     let anyBroadcast = false;
 
-    device.addresses.forEach(a=> {
-      if(hop.to != a.broadcast_addr) return;
+    device.addresses.forEach(a => {
+      if (hop.to != a.broadcast_addr) return;
       anyBroadcast = true;
 
       drawHop({
         from: hop.from,
         to: a.addr,
-        hasUnknownIntermediates: hop.hasUnknownIntermediates
+        hasUnknownIntermediates: hop.hasUnknownIntermediates,
+        isBroadcast: true
       });
     })
 
-    if(anyBroadcast) return;
+    if (anyBroadcast) return;
   }
   if (!nodeMap.has(hop.from)) {
     await drawNode(hop.from);
@@ -131,10 +117,9 @@ async function drawHop(hop) {
   if (!nodeMap.has(hop.to)) {
     await drawNode(hop.to);
   }
-  /** @type HTMLElement */
-  const srcElem = nodeMap.get(hop.from);
-  /** @type HTMLElement */
-  const dstElem = nodeMap.get(hop.to);
+
+  const srcElem = nodeMap.get(hop.from)!;
+  const dstElem = nodeMap.get(hop.to)!;
 
   const ns = svgWindow.getAttribute("xmlns");
   const hopElement = document.createElementNS(ns, 'line');
@@ -155,7 +140,7 @@ async function drawHop(hop) {
   hopElement.setAttribute('y1', `${parseInt(srcElem.style.getPropertyValue("--y-pos")) + y1}%`);
   hopElement.setAttribute('x2', `${dstElem.style.getPropertyValue("--x-pos")}%`);
   hopElement.setAttribute('y2', `${dstElem.style.getPropertyValue("--y-pos")}%`);
-  hopElement.setAttribute("pathLength", 100);
+  hopElement.setAttribute("pathLength", '100');
 
   svgWindow.prepend(hopElement);
 
@@ -164,13 +149,8 @@ async function drawHop(hop) {
   }, 10000);
 }
 
-/**
- * turn any given ip into a random set of x-y coordinates in range [0, 1)
- * with special considerations for lan/localip
- * @param {IP} ip
- * @returns {Promise<{x: number, y: number}>}
- */
-async function ipToPosition(ip) {
+//* turn any given ip into a random set of x-y coordinates in range [0, 1) with special considerations for lan
+async function ipToPosition(ip: IP): Promise<{ x: number, y: number }> {
   let pos = await stringToPosition(ip);
 
   if (await isLAN(ip)) {
@@ -185,14 +165,10 @@ async function ipToPosition(ip) {
   }
 }
 
-/**
- * hash any given string into a set of x-y coordinates in range [0, 1)
- * @param {string} inputString
- * @returns {Promise<{x: number, y: number}>}
- */
-async function stringToPosition(inputString) {
+//* hash any given string into a set of x-y coordinates in range [0, 1)
+async function stringToPosition(input:string): Promise<{ x: number, y: number }> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(inputString);
+  const data = encoder.encode(input);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const dv = new DataView(hashBuffer);
   return { x: dv.getUint16(0) / 65536, y: dv.getUint16(1) / 65536 };

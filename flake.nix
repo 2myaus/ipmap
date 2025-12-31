@@ -17,6 +17,7 @@
         pkgs.rust-analyzer
         pkgs.vscode-langservers-extracted # vscode-html-language-server
         pkgs.typescript-language-server
+        pkgs.bun
       ];
       buildInputs = [
         pkgs.at-spi2-atk

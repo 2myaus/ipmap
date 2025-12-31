@@ -4,7 +4,16 @@
   "identifier": "2myaus.ipmap",
   "version": "0.1.0",
   "build": {
-    "frontendDist": "../src"
+    "frontendDist": "../src-vite/dist",
+    "beforeDevCommand": {
+      "script": "bun run dev",
+      "cwd": "../src-vite"
+    },
+    "beforeBuildCommand": {
+      "script": "bun run build",
+      "cwd": "../src-vite"
+    },
+    "devUrl": "http://localhost:5173"
   },
   "app": {
     "withGlobalTauri": true,
