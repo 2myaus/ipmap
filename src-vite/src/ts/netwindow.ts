@@ -1,5 +1,8 @@
 import type { Device, Hop, IP, Packet } from "./globals";
-import { invoke } from "@tauri-apps/api/core";
+import { deviceHasAddress } from "./globals";
+
+import { ip_to_domain,  } from "./commands";
+import * as ipaddr from "ipaddr.js";
 
 let nodeMap: Map<string, HTMLElement> = new Map();
 
@@ -16,24 +19,6 @@ let device: Device | null = null;
 
 export function setDevice(dev?: Device) {
   device = dev || null;
-}
-
-//* check whether a given IP is in the LAN
-export async function isLAN(ip: IP) {
-
-  // TODO: IPV6
-  if (ip.includes(':')) return false;
-
-  const ipSplit = ip.split('.');
-  return (
-    ipSplit[0] == "10" ||
-    (ipSplit[0] == "192" && ipSplit[1] == "168") ||
-    (
-      ipSplit[0] == "172" &&
-      parseInt(ipSplit[1]) >= 16 &&
-      parseInt(ipSplit[1]) <= 31
-    )
-  );
 }
 
 async function reDrawNodes() {
@@ -55,22 +40,20 @@ export async function drawNode(ip: IP) {
   ipElement.style.setProperty('--y-pos', `${position.y * 100}`);
 
   ipElement.classList.add('node');
-  if (device && device.addresses.find(addr => (
-    addr.addr == ip
-  ))) {
+
+  const ipRange = ipaddr.parse(ip).range()
+  if (device && deviceHasAddress(device, ip)) {
     ipElement.classList.add('localhost');
   }
-  else if (await isLAN(ip)) {
+  else if (ipRange == "private") {
     ipElement.classList.add('lan')
   }
   ipElement.setAttribute('title', ip);
   nodeMap.set(ip, ipElement);
 
   if (showDomains) {
-    try {
-      const domain = await invoke('ip_to_domain', { ip: ip });
-      ipElement.setAttribute('title', `${domain} (${ip})`);
-    } catch (e) { console.warn(e); }
+    const domain = await ip_to_domain(ip);
+    if(domain) ipElement.setAttribute('title', `${domain} (${ip})`);
   }
 
   nodesWindow.appendChild(ipElement);
@@ -82,7 +65,8 @@ export async function drawPacket(packet: Packet) {
     from: packet.src,
     to: packet.dst,
     hasUnknownIntermediates: true,
-    isBroadcast: false
+    isBroadcast: false,
+    isMulticast: ipaddr.parse(packet.dst).range() == "multicast"
   };
 
   await drawHop(hop);
@@ -98,14 +82,15 @@ async function drawHop(hop: Hop) {
     let anyBroadcast = false;
 
     device.addresses.forEach(a => {
-      if (hop.to != a.broadcast_addr) return;
+      if (hop.to != a.broadcast_addr && ipaddr.parse(hop.to).range() != "broadcast") return;
       anyBroadcast = true;
 
       drawHop({
         from: hop.from,
         to: a.addr,
         hasUnknownIntermediates: hop.hasUnknownIntermediates,
-        isBroadcast: true
+        isBroadcast: true,
+        isMulticast: false
       });
     })
 
@@ -126,6 +111,8 @@ async function drawHop(hop: Hop) {
 
   hopElement.classList.add('hop');
   if (hop.hasUnknownIntermediates) hopElement.classList.add('unknown-intermediates');
+  if (hop.isBroadcast) hopElement.classList.add('broadcast');
+  if (hop.isMulticast) hopElement.classList.add('multicast');
 
   // Randomized offsets:
   const maxRx = srcElem.offsetWidth * 10 / nodesWindow.offsetWidth;
@@ -153,7 +140,7 @@ async function drawHop(hop: Hop) {
 async function ipToPosition(ip: IP): Promise<{ x: number, y: number }> {
   let pos = await stringToPosition(ip);
 
-  if (await isLAN(ip)) {
+  if (ipaddr.parse(ip).range() == "private" || (device && deviceHasAddress(device, ip))) {
     return {
       x: pos.x * 0.1 + 0.45,
       y: pos.y * 0.1 + 0.45

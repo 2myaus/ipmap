@@ -24,6 +24,14 @@
   stroke-dasharray: 40 4 4 4 4 4 40;
 }
 
+#net-window .net-window-svg line.hop.broadcast {
+  stroke: #00a0ffa0;
+}
+
+#net-window .net-window-svg line.hop.multicast {
+  stroke: #a000ffa0;
+}
+
 @keyframes fade-out {
   from {
     opacity: 1;

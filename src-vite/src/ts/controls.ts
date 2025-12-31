@@ -1,5 +1,5 @@
+import { get_devices, set_capture_device, start_capture, stop_capture } from './commands';
 import type { Device } from './globals';
-import { invoke } from '@tauri-apps/api/core';
 import { setDevice, setShowDomains } from "./netwindow";
 
 export async function initControls() {
@@ -11,7 +11,7 @@ export async function initControls() {
   let devices:Device[] = [];
 
   getDevicesButton.addEventListener('click', async () => {
-    devices = await invoke('get_devices');
+    devices = await get_devices();
 
     deviceList.innerHTML = '';
 
@@ -28,7 +28,7 @@ export async function initControls() {
   async function deviceListChange(){
     const deviceName = deviceList.value;
 
-    await invoke('set_capture_device', { name: deviceName});
+    await set_capture_device(deviceName);
     setDevice(devices.find(dev => (
       dev.name == deviceName
     )));
@@ -41,12 +41,12 @@ export async function initControls() {
   let capturing = false;
   toggleCaptureButton.addEventListener('click', async () => {
     if (capturing) {
-      invoke('stop_capture');
+      await stop_capture();
       capturing = false
       deviceList.disabled = false;
     }
     else {
-      await invoke('start_capture');
+      await start_capture();
       capturing = true;
       deviceList.disabled = true;
     }
